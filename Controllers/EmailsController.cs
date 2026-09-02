@@ -220,7 +220,8 @@ namespace MailArchiver.Controllers
                 model.PageSize,
                 allowedAccountIds,
                 model.SortBy ?? "SentDate",
-                model.SortOrder ?? "desc");
+                model.SortOrder ?? "desc",
+                hasAttachments: model.HasAttachments);
 
             model.SearchResults = emails;
             model.TotalResults = totalCount;

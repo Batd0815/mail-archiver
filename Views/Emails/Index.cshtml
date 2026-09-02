@@ -72,6 +72,14 @@
                         <label asp-for="IsOutgoing" class="form-label">@Localizer["Direction"]</label>
                         <select asp-for="IsOutgoing" asp-items="Model.DirectionOptions" class="form-select form-select-sm"></select>
                     </div>
+                    <div class="col-12 col-md-6 col-lg-2 mb-3">
+                        <label asp-for="HasAttachments" class="form-label">@Localizer["Attachments"]</label>
+                        <select asp-for="HasAttachments" class="form-select form-select-sm">
+                        <option value="">@Localizer["All"]</option>
+                        <option value="true">Mit Anhängen</option>
+                        <option value="false">Ohne Anhänge</option>
+                        </select>
+                </div>
                 </div>
                 <div class="row">
                     <div class="col-12">

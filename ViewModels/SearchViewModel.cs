@@ -10,6 +10,7 @@ namespace MailArchiver.Models.ViewModels
         public int? SelectedAccountId { get; set; }
         public string SelectedFolder { get; set; }
         public bool? IsOutgoing { get; set; }
+        public bool? HasAttachments { get; set; }
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 20;
         public string UserTimezone { get; set; } = "UTC";

@@ -49,7 +49,8 @@ namespace MailArchiver.Services.Core
             int take,
             List<int> allowedAccountIds = null,
             string sortBy = "SentDate",
-            string sortOrder = "desc")
+            string sortOrder = "desc",
+            bool? hasAttachments = null)
         {
             var startTime = DateTime.UtcNow;
 
@@ -67,12 +68,12 @@ namespace MailArchiver.Services.Core
 
             try
             {
-                return await SearchEmailsOptimizedAsync(searchTerm, fromDate, toDate, accountId, folderName, isOutgoing, skip, take, allowedAccountIds, sortBy, sortOrder);
+                return await SearchEmailsOptimizedAsync(searchTerm, fromDate, toDate, accountId, folderName, isOutgoing, hasAttachments, skip, take, allowedAccountIds, sortBy, sortOrder);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Optimized search failed, falling back to Entity Framework search");
-                return await SearchEmailsEFAsync(searchTerm, fromDate, toDate, accountId, folderName, isOutgoing, skip, take, allowedAccountIds);
+                return await SearchEmailsEFAsync(searchTerm, fromDate, toDate, accountId, folderName, isOutgoing, hasAttachments, skip, take, allowedAccountIds);
             }
         }
 
@@ -83,6 +84,7 @@ namespace MailArchiver.Services.Core
             int? accountId,
             string folderName,
             bool? isOutgoing,
+            bool? hasAttachments,
             int skip,
             int take,
             List<int> allowedAccountIds = null,
@@ -247,6 +249,12 @@ namespace MailArchiver.Services.Core
             {
                 whereConditions.Add($@"""IsOutgoing"" = @param{paramCounter}");
                 parameters.Add(new Npgsql.NpgsqlParameter($"@param{paramCounter}", isOutgoing.Value));
+                paramCounter++;
+            }
+            if (hasAttachments.HasValue)
+            {
+                whereConditions.Add($@"""HasAttachments"" = @param{paramCounter}");
+                parameters.Add(new Npgsql.NpgsqlParameter($"@param{paramCounter}", hasAttachments.Value));
                 paramCounter++;
             }
 
@@ -586,6 +594,7 @@ namespace MailArchiver.Services.Core
             int? accountId,
             string folderName,
             bool? isOutgoing,
+            bool? hasAttachments,
             int skip,
             int take,
             List<int> allowedAccountIds = null)
@@ -615,6 +624,9 @@ namespace MailArchiver.Services.Core
 
             if (isOutgoing.HasValue)
                 baseQuery = baseQuery.Where(e => e.IsOutgoing == isOutgoing.Value);
+
+            if (hasAttachments.HasValue)
+                baseQuery = baseQuery.Where(e => e.HasAttachments == hasAttachments.Value);
 
             if (!string.IsNullOrEmpty(folderName))
             {
