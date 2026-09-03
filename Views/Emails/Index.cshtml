@@ -263,28 +263,28 @@
                                                 </div>
                                             </th>
                                         }
-                                        <th style="cursor: pointer;" onclick="window.location.href='@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, PageNumber = 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = "Subject", SortOrder = (Model.SortBy == "Subject" && Model.SortOrder == "asc") ? "desc" : "asc" })'">
+                                        <th style="cursor: pointer;" onclick="window.location.href='@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, HasAttachments = Model.HasAttachments, PageNumber = 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = "Subject", SortOrder = (Model.SortBy == "Subject" && Model.SortOrder == "asc") ? "desc" : "asc" })'">
                                             @Localizer["Subject"]
                                             @if (Model.SortBy == "Subject")
                                             {
                                                 <i class="bi bi-@(Model.SortOrder == "asc" ? "arrow-up" : "arrow-down")"></i>
                                             }
                                         </th>
-                                        <th style="cursor: pointer;" onclick="window.location.href='@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, PageNumber = 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = "From", SortOrder = (Model.SortBy == "From" && Model.SortOrder == "asc") ? "desc" : "asc" })'">
+                                        <th style="cursor: pointer;" onclick="window.location.href='@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, HasAttachments = Model.HasAttachments, PageNumber = 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = "From", SortOrder = (Model.SortBy == "From" && Model.SortOrder == "asc") ? "desc" : "asc" })'">
                                             @Localizer["From"]
                                             @if (Model.SortBy == "From")
                                             {
                                                 <i class="bi bi-@(Model.SortOrder == "asc" ? "arrow-up" : "arrow-down")"></i>
                                             }
                                         </th>
-                                        <th style="cursor: pointer;" onclick="window.location.href='@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, PageNumber = 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = "To", SortOrder = (Model.SortBy == "To" && Model.SortOrder == "asc") ? "desc" : "asc" })'">
+                                        <th style="cursor: pointer;" onclick="window.location.href='@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, HasAttachments = Model.HasAttachments, PageNumber = 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = "To", SortOrder = (Model.SortBy == "To" && Model.SortOrder == "asc") ? "desc" : "asc" })'">
                                             @Localizer["To"]
                                             @if (Model.SortBy == "To")
                                             {
                                                 <i class="bi bi-@(Model.SortOrder == "asc" ? "arrow-up" : "arrow-down")"></i>
                                             }
                                         </th>
-                                        <th style="cursor: pointer;" onclick="window.location.href='@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, PageNumber = 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = "SentDate", SortOrder = (Model.SortBy == "SentDate" && Model.SortOrder == "asc") ? "desc" : "asc" })'">
+                                        <th style="cursor: pointer;" onclick="window.location.href='@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, HasAttachments = Model.HasAttachments, PageNumber = 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = "SentDate", SortOrder = (Model.SortBy == "SentDate" && Model.SortOrder == "asc") ? "desc" : "asc" })'">
                                             @Localizer["Date"]
                                             @if (Model.SortBy == "SentDate")
                                             {
@@ -422,7 +422,7 @@
                                 @if (Model.PageNumber > 1)
                                 {
                                     <li class="page-item">
-                                        <a class="page-link" href="@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, PageNumber = Model.PageNumber - 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = Model.SortBy, SortOrder = Model.SortOrder })">@Localizer["Previous"]</a>
+                                        <a class="page-link" href="@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, HasAttachments = Model.HasAttachments, PageNumber = Model.PageNumber - 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = Model.SortBy, SortOrder = Model.SortOrder })">@Localizer["Previous"]</a>
                                     </li>
                                 }
                                 @{
@@ -432,13 +432,13 @@
                                 @for (int i = startPage; i <= endPage; i++)
                                 {
                                     <li class="page-item @(i == Model.PageNumber ? "active" : "")">
-                                        <a class="page-link" href="@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, PageNumber = i, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = Model.SortBy, SortOrder = Model.SortOrder })">@i</a>
+                                        <a class="page-link" href="@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, HasAttachments = Model.HasAttachments, PageNumber = i, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = Model.SortBy, SortOrder = Model.SortOrder })">@i</a>
                                     </li>
                                 }
                                 @if (Model.PageNumber < Model.TotalPages)
                                 {
                                     <li class="page-item">
-                                        <a class="page-link" href="@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, PageNumber = Model.PageNumber + 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = Model.SortBy, SortOrder = Model.SortOrder })">@Localizer["Next"]</a>
+                                        <a class="page-link" href="@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, HasAttachments = Model.HasAttachments, PageNumber = Model.PageNumber + 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = Model.SortBy, SortOrder = Model.SortOrder })">@Localizer["Next"]</a>
                                     </li>
                                 }
                             </ul>
