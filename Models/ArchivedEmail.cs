@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 namespace MailArchiver.Models
 {
     public class ArchivedEmail
@@ -26,6 +27,8 @@ namespace MailArchiver.Models
         public DateTime ReceivedDate { get; set; } = DateTime.UtcNow;
         public bool IsOutgoing { get; set; }
         public bool HasAttachments { get; set; }
+        [NotMapped]
+        public long AttachmentSize { get; set; }
         public string FolderName { get; set; }
 
         // Raw email headers as stored in the original email

@@ -73,7 +73,7 @@ namespace MailArchiver.Services.Core
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Optimized search failed, falling back to Entity Framework search");
-                return await SearchEmailsEFAsync(searchTerm, fromDate, toDate, accountId, folderName, isOutgoing, hasAttachments, skip, take, allowedAccountIds);
+                return await SearchEmailsEFAsync(searchTerm, fromDate, toDate, accountId, folderName, isOutgoing, hasAttachments, skip, take, allowedAccountIds, sortBy, sortOrder);
             }
         }
 
@@ -329,6 +329,11 @@ namespace MailArchiver.Services.Core
                     SELECT e.""Id"", e.""MailAccountId"", e.""MessageId"", e.""Subject"", e.""Body"", e.""HtmlBody"",
                            e.""From"", e.""To"", e.""Cc"", e.""Bcc"", e.""SentDate"", e.""ReceivedDate"",
                            e.""IsOutgoing"", e.""HasAttachments"", e.""FolderName"", e.""IsLocked"",
+                           (
+                               SELECT COALESCE(SUM(a.""Size""), 0)
+                               FROM mail_archiver.""EmailAttachments"" a
+                               WHERE a.""ArchivedEmailId"" = e.""Id""
+                           ) AS ""AttachmentSize"",
                            ma.""Id"" as ""AccountId"", ma.""Name"" as ""AccountName"", ma.""EmailAddress"" as ""AccountEmail""
                     FROM ""page"" p
                     INNER JOIN mail_archiver.""ArchivedEmails"" e ON e.""Id"" = p.""Id""
@@ -341,6 +346,11 @@ namespace MailArchiver.Services.Core
                     SELECT e.""Id"", e.""MailAccountId"", e.""MessageId"", e.""Subject"", e.""Body"", e.""HtmlBody"",
                            e.""From"", e.""To"", e.""Cc"", e.""Bcc"", e.""SentDate"", e.""ReceivedDate"",
                            e.""IsOutgoing"", e.""HasAttachments"", e.""FolderName"", e.""IsLocked"",
+                           (
+                               SELECT COALESCE(SUM(a.""Size""), 0)
+                               FROM mail_archiver.""EmailAttachments"" a
+                               WHERE a.""ArchivedEmailId"" = e.""Id""
+                           ) AS ""AttachmentSize"",
                            ma.""Id"" as ""AccountId"", ma.""Name"" as ""AccountName"", ma.""EmailAddress"" as ""AccountEmail""
                     FROM mail_archiver.""ArchivedEmails"" e
                     INNER JOIN mail_archiver.""MailAccounts"" ma ON e.""MailAccountId"" = ma.""Id""
@@ -406,6 +416,7 @@ namespace MailArchiver.Services.Core
                     HasAttachments = reader.GetBoolean(reader.GetOrdinal("HasAttachments")),
                     FolderName = reader.IsDBNull(reader.GetOrdinal("FolderName")) ? "" : reader.GetString(reader.GetOrdinal("FolderName")),
                     IsLocked = reader.GetBoolean(reader.GetOrdinal("IsLocked")),
+                    AttachmentSize = reader.IsDBNull(reader.GetOrdinal("AttachmentSize")) ? 0 : reader.GetInt64(reader.GetOrdinal("AttachmentSize")),
                     MailAccount = new MailAccount
                     {
                         Id = reader.GetInt32(reader.GetOrdinal("AccountId")),
@@ -542,6 +553,17 @@ namespace MailArchiver.Services.Core
         {
             // sortBy is already canonicalized by SearchEmailsAsync; the switch
             // below is a defensive whitelist — unknown values never reach SQL.
+            var direction = sortOrder == "asc" ? "ASC" : "DESC";
+
+            if (sortBy == "AttachmentSize")
+            {
+                return ($@"ORDER BY (
+                    SELECT COALESCE(SUM(a.""Size""), 0)
+                    FROM mail_archiver.""EmailAttachments"" a
+                    WHERE a.""ArchivedEmailId"" = e.""Id""
+                ) {direction}", "AttachmentSize", false);
+            }
+
             var (columnName, isTimestampSort) = sortBy switch
             {
                 "Subject" => ("Subject", false),
@@ -552,7 +574,6 @@ namespace MailArchiver.Services.Core
                 _ => ("SentDate", true)
             };
 
-            var direction = sortOrder == "asc" ? "ASC" : "DESC";
             return ($@"ORDER BY e.""{columnName}"" {direction}", columnName, isTimestampSort);
         }
 
@@ -567,6 +588,7 @@ namespace MailArchiver.Services.Core
             "subject" => "Subject",
             "from" => "From",
             "to" => "To",
+            "attachmentsize" => "AttachmentSize",
             _ => "SentDate" // null, "", "sentdate", unknown -> default
         };
 
@@ -597,7 +619,9 @@ namespace MailArchiver.Services.Core
             bool? hasAttachments,
             int skip,
             int take,
-            List<int> allowedAccountIds = null)
+            List<int> allowedAccountIds = null,
+            string sortBy = "SentDate",
+            string sortOrder = "desc")
         {
             var baseQuery = _context.ArchivedEmails.AsNoTracking().AsQueryable();
 
@@ -734,9 +758,30 @@ namespace MailArchiver.Services.Core
             }
 
             var totalCount = await searchQuery.CountAsync();
-            var emails = await searchQuery
+            var orderedQuery = sortBy switch
+            {   
+                "AttachmentSize" => sortOrder == "asc"
+                    ? searchQuery.OrderBy(e => e.Attachments.Sum(a => a.Size))
+                    : searchQuery.OrderByDescending(e => e.Attachments.Sum(a => a.Size)),
+                "Subject" => sortOrder == "asc"
+                    ? searchQuery.OrderBy(e => e.Subject)
+                    : searchQuery.OrderByDescending(e => e.Subject),
+                "From" => sortOrder == "asc"
+                    ? searchQuery.OrderBy(e => e.From)
+                    : searchQuery.OrderByDescending(e => e.From),
+                "To" => sortOrder == "asc"
+                    ? searchQuery.OrderBy(e => e.To)
+                    : searchQuery.OrderByDescending(e => e.To),
+                "ReceivedDate" => sortOrder == "asc"
+                    ? searchQuery.OrderBy(e => e.ReceivedDate)
+                    : searchQuery.OrderByDescending(e => e.ReceivedDate),
+                _ => sortOrder == "asc"
+                     ? searchQuery.OrderBy(e => e.SentDate)
+                    : searchQuery.OrderByDescending(e => e.SentDate)
+            };
+
+            var emails = await orderedQuery
                 .Include(e => e.MailAccount)
-                .OrderByDescending(e => e.SentDate)
                 .Skip(skip)
                 .Take(take)
                 .ToListAsync();

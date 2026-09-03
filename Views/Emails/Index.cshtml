@@ -291,6 +291,13 @@
                                                 <i class="bi bi-@(Model.SortOrder == "asc" ? "arrow-up" : "arrow-down")"></i>
                                             }
                                         </th>
+                                        <th style="cursor: pointer;" onclick="window.location.href='@Url.Action("Index", new { SearchTerm = Model.SearchTerm, FromDate = Model.FromDate?.ToString("yyyy-MM-dd"), ToDate = Model.ToDate?.ToString("yyyy-MM-dd"), SelectedAccountId = Model.SelectedAccountId, SelectedFolder = Model.SelectedFolder, IsOutgoing = Model.IsOutgoing, HasAttachments = Model.HasAttachments, PageNumber = 1, PageSize = Model.PageSize, ShowSelectionControls = Model.ShowSelectionControls, SortBy = "AttachmentSize", SortOrder = (Model.SortBy == "AttachmentSize" && Model.SortOrder == "asc") ? "desc" : "asc" })'">
+                                            Anhanggröße
+                                            @if (Model.SortBy == "AttachmentSize")
+                                            {
+                                                <i class="bi bi-arrow-@(Model.SortOrder == "asc" ? "up" : "down")"></i>
+                                            }
+                                        </th>
                                         <th>@Localizer["Account"]</th>
                                         <th>@Localizer["Status"]</th>
                                         <th></th>
@@ -323,6 +330,16 @@
                                             <td>@email.From</td>
                                             <td>@email.To</td>
                                             <td>@email.SentDate.ToString("g")</td>
+                                            <td>
+                                                @if (email.AttachmentSize > 0)
+                                                {
+                                                    @($"{email.AttachmentSize / 1024.0 / 1024.0:F2} MB")
+                                                }
+                                                else
+                                                {
+                                                    @("-")
+                                                }
+                                            </td>
                                             <td>@email.MailAccount.Name</td>
                                             <td>
                                                 @if (email.HasAttachments)
@@ -375,6 +392,17 @@
                                         <div><strong>@Localizer["From"]:</strong> @email.From</div>
                                         <div><strong>@Localizer["To"]:</strong> @(email.To.Length > 50 ? email.To.Substring(0, 50) + "..." : email.To)</div>
                                         <div><strong>@Localizer["Date"]:</strong> @email.SentDate.ToString("g")</div>
+                                        <div>
+                                            <strong>Anhanggröße:</strong>
+                                            @if (email.AttachmentSize > 0)
+                                            {
+                                                @($"{email.AttachmentSize / 1024.0 / 1024.0:F2} MB")
+                                            }
+                                            else
+                                            {
+                                                @("-")
+                                            }
+                                        </div>
                                         <div><strong>@Localizer["Account"]:</strong> @email.MailAccount.Name</div>
                                     </div>
                                     <div class="email-card-actions email-row-no-nav">
