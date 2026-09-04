@@ -37,5 +37,27 @@ Implemented in commit `98210d3`:
   the GET form.
 
 Verification: build succeeded and 40 existing MBox tests passed. The development
-server must be available for the controlled end-to-end check before proceeding to
-the next phase.
+server test then confirmed import into a disabled target account without synchronization.
+
+## Phase 2 status
+
+Implemented in commit `b6b6518`:
+
+- A duplicate-only MBox import finishes as `CompletedWithDuplicates`, not as an error.
+- The status page distinguishes duplicates from failed or malformed messages.
+- The CLI treats the duplicate-only completion as a successful exit.
+
+## Phase 3a status: Thunderbird preview
+
+Implemented in the following commit:
+
+- `--preview-thunderbird --directory <approved-path>` performs a read-only recursive scan.
+- It detects MBox files without an extension as used by Thunderbird, ignores Thunderbird
+  metadata and proposes target folders while normalizing `.sbd` directories.
+- The scanner does not provide a web filesystem browser, never contacts a mail server and
+  validates that the source directory is below `LocalImport:AllowedPaths`.
+- The path allowlist now checks directory boundaries, so a path with only the same prefix
+  cannot bypass the restriction.
+
+The next Phase 3b is the explicit, reviewable batch-queue confirmation. It must use the
+preview result rather than rescan arbitrary paths from a browser request.

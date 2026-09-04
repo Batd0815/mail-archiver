@@ -5,6 +5,7 @@ using MailArchiver.Data;
 using MailArchiver.Models;
 using MailArchiver.Services;
 using MailArchiver.Services.Providers;
+using MailArchiver.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -561,14 +562,69 @@ var app = builder.Build();
 
 // Handle CLI commands: S3 disaster recovery and local import
 var cliArgs = Environment.GetCommandLineArgs();
-if (cliArgs.Any(a => a == "--import-mbox" || a == "--import-eml"))
+if (cliArgs.Any(a => a == "--import-mbox" || a == "--import-eml" || a == "--preview-thunderbird"))
 {
     using var cliScope = app.Services.CreateScope();
     var cliServices = cliScope.ServiceProvider;
     var cliLogger = cliServices.GetRequiredService<ILogger<Program>>();
     
     try
-    {      
+    {
+        // === Thunderbird profile preview ===
+        // This command is intentionally read-only. It never opens a mail account and never
+        // queues an import; it merely lists MBox folders within an allowed local directory.
+        if (cliArgs.Contains("--preview-thunderbird"))
+        {
+            var directoryIndex = Array.IndexOf(cliArgs, "--directory");
+            if (directoryIndex < 0 || directoryIndex + 1 >= cliArgs.Length)
+            {
+                Console.WriteLine("ERROR: --directory <path> is required for Thunderbird preview");
+                Environment.Exit(1);
+            }
+
+            var sourceDirectory = cliArgs[directoryIndex + 1];
+            if (!Directory.Exists(sourceDirectory))
+            {
+                Console.WriteLine($"ERROR: Directory not found: {sourceDirectory}");
+                Environment.Exit(1);
+            }
+
+            var localImportOptions = cliServices.GetRequiredService<IOptions<LocalImportOptions>>().Value;
+            if (!LocalImportPathPolicy.IsAllowed(sourceDirectory, localImportOptions.AllowedPaths))
+            {
+                Console.WriteLine($"ERROR: Directory '{sourceDirectory}' is not in an allowed import directory.");
+                Console.WriteLine("Allowed paths (configured in appsettings.json -> LocalImport -> AllowedPaths):");
+                foreach (var allowed in localImportOptions.AllowedPaths)
+                    Console.WriteLine($"  - {Path.GetFullPath(allowed)}");
+                Environment.Exit(1);
+            }
+
+            var targetBaseIndex = Array.IndexOf(cliArgs, "--target-base-folder");
+            var targetBaseFolder = targetBaseIndex >= 0 && targetBaseIndex + 1 < cliArgs.Length
+                ? cliArgs[targetBaseIndex + 1]
+                : "Thunderbird";
+            var preview = ThunderbirdMBoxScanner.Scan(sourceDirectory, targetBaseFolder);
+
+            Console.WriteLine("=== Thunderbird MBox Preview (read-only) ===");
+            Console.WriteLine($"Source directory: {preview.SourceDirectory}");
+            Console.WriteLine($"Proposed target base: {targetBaseFolder}");
+            Console.WriteLine($"MBox folders found: {preview.Items.Count}");
+            Console.WriteLine($"Ignored Thunderbird metadata files: {preview.IgnoredMetadataFiles}");
+            Console.WriteLine($"Ignored non-MBox files: {preview.IgnoredNonMboxFiles}");
+            Console.WriteLine();
+            Console.WriteLine("Source relative path | Size (MiB) | Suggested target folder");
+            foreach (var item in preview.Items)
+            {
+                var emptySuffix = item.IsEmpty ? " (empty)" : string.Empty;
+                Console.WriteLine($"{item.RelativePath}{emptySuffix} | {item.FileSize / (1024.0 * 1024.0):F2} | {item.SuggestedTargetFolder}");
+            }
+
+            foreach (var warning in preview.Warnings)
+                Console.WriteLine($"WARNING: {warning}");
+
+            Environment.Exit(0);
+        }
+
         // === Local File Import Commands ===
         if (cliArgs.Contains("--import-mbox") || cliArgs.Contains("--import-eml"))
         {
@@ -613,12 +669,7 @@ if (cliArgs.Any(a => a == "--import-mbox" || a == "--import-eml"))
             
             // Validate path is in allowed paths
             var localImportOptions = cliServices.GetRequiredService<IOptions<LocalImportOptions>>().Value;
-            var normalizedPath = Path.GetFullPath(filePath);
-            var isAllowed = localImportOptions.AllowedPaths.Any(allowed =>
-            {
-                var normalizedAllowed = Path.GetFullPath(allowed);
-                return normalizedPath.StartsWith(normalizedAllowed, StringComparison.OrdinalIgnoreCase);
-            });
+            var isAllowed = LocalImportPathPolicy.IsAllowed(filePath, localImportOptions.AllowedPaths);
             
             if (!isAllowed)
             {

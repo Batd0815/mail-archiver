@@ -18,6 +18,25 @@ Local import is **CLI-only** – there is no web endpoint for browsing or import
 
 A **path whitelist** (`LocalImport:AllowedPaths`) controls which directories the importer can read from. Files outside these paths are rejected.
 
+## Thunderbird profile preview (read-only)
+
+Before importing an old Thunderbird profile, first create a preview. The preview walks only
+an approved, mounted directory. It does not import emails, contact mail servers, or expose
+the directory through the web UI.
+
+```bash
+dotnet MailArchiver.dll --preview-thunderbird \
+  --directory /data/import/Thunderbird \
+  --target-base-folder Altbestand/Thunderbird
+```
+
+The output contains each detected MBox source file, its size and its proposed target folder.
+Typical Thunderbird metadata files such as `.msf` are ignored. Folder suffixes such as
+`Inbox.sbd/Projects` are mapped to `Inbox/Projects`.
+
+Only review the output at this stage. A later confirmation step will use the reviewed mapping
+to queue imports; the preview command itself never changes archive data.
+
 ## 🛠️ Setup
 
 ### 1. Configure Allowed Paths
