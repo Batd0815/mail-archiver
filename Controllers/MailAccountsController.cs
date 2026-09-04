@@ -135,6 +135,32 @@ namespace MailArchiver.Controllers
             => await HttpContext.RequestServices.GetRequiredService<IAccountAccessResolver>()
                 .GetAllowedAccountIdsAsync(HttpContext);
 
+        private async Task<List<MailAccount>> GetImportTargetAccountsAsync()
+        {
+            var allowedAccountIds = await GetAllowedAccountIdsAsync();
+            IQueryable<MailAccount> query = _context.MailAccounts;
+
+            if (allowedAccountIds != null)
+            {
+                query = query.Where(account => allowedAccountIds.Contains(account.Id));
+            }
+
+            return await query
+                .OrderBy(account => account.Name)
+                .ThenBy(account => account.Id)
+                .ToListAsync();
+        }
+
+        private List<SelectListItem> CreateImportTargetSelectList(
+            IEnumerable<MailAccount> accounts, int selectedAccountId = 0)
+            => accounts.Select(account => new SelectListItem
+            {
+                Value = account.Id.ToString(),
+                Text = $"{account.Name} ({account.EmailAddress})" +
+                    (account.IsEnabled ? string.Empty : $" — {_localizer["ImportTargetSyncDisabled"]}"),
+                Selected = account.Id == selectedAccountId
+            }).ToList();
+
         // GET: MailAccounts
         public async Task<IActionResult> Index()
         {
@@ -1663,46 +1689,14 @@ namespace MailArchiver.Controllers
         // GET: MailAccounts/ImportMBox
         public async Task<IActionResult> ImportMBox()
         {
-            // Use the authentication service to get user info properly
-            var authService = HttpContext.RequestServices.GetService<MailArchiver.Services.IAuthenticationService>();
-            var currentUsername = authService.GetCurrentUserDisplayName(HttpContext);
-            var isAdmin = authService.IsCurrentUserAdmin(HttpContext);
-            var isSelfManager = authService.IsCurrentUserSelfManager(HttpContext);
-
-            IQueryable<MailAccount> mailAccountsQuery;
-
-            // Check if user is admin (including legacy admin)
-            if (isAdmin)
-            {
-                _logger.LogInformation("User is admin, showing all accounts");
-                mailAccountsQuery = _context.MailAccounts;
-            }
-            else if (isSelfManager)
-            {
-                _logger.LogInformation("User is SelfManager, showing only assigned accounts");
-                mailAccountsQuery = _context.MailAccounts
-                    .Where(ma => ma.UserMailAccounts.Any(uma => uma.User.Username.ToLower() == currentUsername.ToLower()));
-            }
-            else
-            {
-                _logger.LogInformation("User has no special permissions, showing no accounts");
-                mailAccountsQuery = _context.MailAccounts.Where(ma => false); // Empty query
-            }
-
-            var accounts = await mailAccountsQuery
-                .Where(a => a.IsEnabled)
-                .OrderBy(a => a.Name)
-                .ToListAsync();
+            var accounts = await GetImportTargetAccountsAsync();
 
             var model = new MBoxImportViewModel
             {
-                AvailableAccounts = accounts.Select(a => new SelectListItem
-                {
-                    Value = a.Id.ToString(),
-                    Text = $"{a.Name} ({a.EmailAddress})"
-                }).ToList(),
+                AvailableAccounts = CreateImportTargetSelectList(accounts),
                 MaxFileSize = _uploadOptions.MaxFileSizeBytes,
-                AccountProviders = accounts.ToDictionary(a => a.Id, a => a.Provider)
+                AccountProviders = accounts.ToDictionary(a => a.Id, a => a.Provider),
+                AccountIsEnabled = accounts.ToDictionary(a => a.Id, a => a.IsEnabled)
             };
 
             return View(model);
@@ -1716,17 +1710,10 @@ namespace MailArchiver.Controllers
         public async Task<IActionResult> ImportMBox(MBoxImportViewModel model)
         {
             // Reload accounts for validation failure
-            var accounts = await _context.MailAccounts
-                .Where(a => a.IsEnabled)
-                .OrderBy(a => a.Name)
-                .ToListAsync();
-
-            model.AvailableAccounts = accounts.Select(a => new SelectListItem
-            {
-                Value = a.Id.ToString(),
-                Text = $"{a.Name} ({a.EmailAddress})",
-                Selected = a.Id == model.TargetAccountId
-            }).ToList();
+            var accounts = await GetImportTargetAccountsAsync();
+            model.AvailableAccounts = CreateImportTargetSelectList(accounts, model.TargetAccountId);
+            model.AccountProviders = accounts.ToDictionary(a => a.Id, a => a.Provider);
+            model.AccountIsEnabled = accounts.ToDictionary(a => a.Id, a => a.IsEnabled);
 
             // Ensure MaxFileSize is set for validation failures
             model.MaxFileSize = _uploadOptions.MaxFileSizeBytes;
@@ -1757,7 +1744,7 @@ namespace MailArchiver.Controllers
             }
 
             // Validate target account
-            var targetAccount = await _context.MailAccounts.FindAsync(model.TargetAccountId);
+            var targetAccount = accounts.FirstOrDefault(account => account.Id == model.TargetAccountId);
             if (targetAccount == null)
             {
                 ModelState.AddModelError("TargetAccountId", _localizer["SelectedAccountNotFound"]);
@@ -2395,9 +2382,10 @@ namespace MailArchiver.Controllers
                     return Json(new List<string> { "INBOX" });
                 }
 
-                if (account.Provider == ProviderType.IMPORT)
+                if (account.Provider == ProviderType.IMPORT || !account.IsEnabled)
                 {
-                    // Für IMPORT-Konten: Existierende Ordner aus der Datenbank abrufen
+                    // IMPORT and disabled accounts must not contact a remote mail server.
+                    // Their locally archived folders remain valid import destinations.
                     var folders = await _context.ArchivedEmails
                         .Where(e => e.MailAccountId == accountId && !string.IsNullOrEmpty(e.FolderName))
                         .Select(e => e.FolderName)

@@ -23,6 +23,11 @@ namespace MailArchiver.Models.ViewModels
         // Dictionary to store Provider type for each account (key = account Id)
         public Dictionary<int, ProviderType> AccountProviders { get; set; } = new Dictionary<int, ProviderType>();
 
+        // Disabled accounts are valid import targets, but their folders must be read locally.
+        // Keeping this separate from the provider lets an IMAP account be imported into before
+        // its first synchronization without contacting the mail server.
+        public Dictionary<int, bool> AccountIsEnabled { get; set; } = new Dictionary<int, bool>();
+
         public long MaxFileSize { get; set; }
         public string MaxFileSizeFormatted => FormatFileSize(MaxFileSize);
 

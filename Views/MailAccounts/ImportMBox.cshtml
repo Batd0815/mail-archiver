@@ -120,6 +120,7 @@
         $(document).ready(function () {
             // AccountProviders dictionary from server
             const accountProviders = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AccountProviders));
+            const accountIsEnabled = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AccountIsEnabled));
             
             // Provider type constant for IMPORT
             const PROVIDER_IMPORT = 2; // ProviderType.IMPORT enum value
@@ -131,6 +132,7 @@
                 loadingFolders: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["LoadingFolders"].Value)),
                 errorLoadingFolders: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["ErrorLoadingFolders"].Value)),
                 enterFolderNameOrSelect: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["EnterFolderNameOrSelect"].Value)),
+                importTargetLocalFoldersOnly: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["ImportTargetLocalFoldersOnly"].Value)),
                 fileSizeExceedsMax: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(string.Format(Localizer["FileSizeExceedsMax"], Model.MaxFileSizeFormatted))),
                 startingImport: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["StartingImport"].Value)),
                 uploadInProgress: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["UploadInProgress"].Value))
@@ -178,14 +180,15 @@
                 updateSubmitButton();
                 
                 if (accountId) {
-                    // Check if this is an IMPORT account
-                    const isImportAccount = accountProviders[accountId] === PROVIDER_IMPORT;
+                    // IMPORT and disabled accounts use local folders. A disabled IMAP/M365
+                    // account is therefore safe to use as an import target before first sync.
+                    const usesLocalFolders = accountProviders[accountId] === PROVIDER_IMPORT || accountIsEnabled[accountId] === false;
                     
-                    if (isImportAccount) {
-                        // IMPORT account: Show text input with autocomplete
+                    if (usesLocalFolders) {
+                        // Local folders: show text input with autocomplete and never probe IMAP.
                         $('#folderSelect').hide().prop('disabled', true);
                         $('#folderInput').show().prop('disabled', false);
-                        $('#folderHelpText').text(loc.enterFolderNameOrSelect);
+                        $('#folderHelpText').text(loc.importTargetLocalFoldersOnly);
                         
                         // Load existing folders for autocomplete
                         $.ajax({
@@ -277,8 +280,8 @@
                 const hasAccount = $('#accountSelect').val() !== '';
                 
                 // Check which input is visible and get folder value
-                const isImportAccount = $('#folderInput').is(':visible');
-                const folderValue = isImportAccount ? $('#folderInput').val() : $('#folderSelect').val();
+                const usesLocalFolders = $('#folderInput').is(':visible');
+                const folderValue = usesLocalFolders ? $('#folderInput').val() : $('#folderSelect').val();
                 const hasFolder = folderValue && folderValue.trim() !== '';
                 
                 $('#submitBtn').prop('disabled', !(hasFile && hasAccount && hasFolder));

@@ -739,6 +739,12 @@
   <data name="MBoxImportInformation" xml:space="preserve">
     <value>MBox Import Information:</value>
   </data>
+  <data name="ImportTargetSyncDisabled" xml:space="preserve">
+    <value>Synchronisierung deaktiviert</value>
+  </data>
+  <data name="ImportTargetLocalFoldersOnly" xml:space="preserve">
+    <value>Die Synchronisierung ist deaktiviert. Es werden nur vorhandene lokale Ordner angeboten; der Mailserver wird nicht kontaktiert.</value>
+  </data>
   <data name="SupportedFormatsStandard" xml:space="preserve">
     <value>unterstützte Formate: Standard MBox Dateien (.mbox, .mbx)</value>
   </data>
