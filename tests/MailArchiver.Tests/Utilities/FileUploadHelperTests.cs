@@ -33,4 +33,22 @@ public class FileUploadHelperTests
     [InlineData("   ")]
     public void IsAllowedImportExtension_NullOrEmpty_ReturnsFalse(string? fileName)
         => Assert.False(FileUploadHelper.IsAllowedImportExtension(fileName));
+
+    [Theory]
+    [InlineData("archive.mbox")]
+    [InlineData("archive.mbx")]
+    [InlineData("Inbox")]
+    [InlineData("Android")]
+    [InlineData("Mail/Local Folders/Archive")]
+    public void IsAllowedMboxFileName_ThunderbirdAndMboxNames_ReturnsTrue(string fileName)
+        => Assert.True(FileUploadHelper.IsAllowedMboxFileName(fileName));
+
+    [Theory]
+    [InlineData("file.eml")]
+    [InlineData("file.zip")]
+    [InlineData("file.txt")]
+    [InlineData(".hidden")]
+    [InlineData(null)]
+    public void IsAllowedMboxFileName_NonMboxNames_ReturnsFalse(string? fileName)
+        => Assert.False(FileUploadHelper.IsAllowedMboxFileName(fileName));
 }

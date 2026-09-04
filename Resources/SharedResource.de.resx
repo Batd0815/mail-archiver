@@ -739,6 +739,9 @@
   <data name="MBoxImportInformation" xml:space="preserve">
     <value>MBox Import Information:</value>
   </data>
+  <data name="SupportedMBoxFormatsWithMax" xml:space="preserve">
+    <value>Unterstützte Formate: .mbox, .mbx oder Thunderbird-MBox-Dateien ohne Endung. Maximale Größe: {0}</value>
+  </data>
   <data name="ImportTargetSyncDisabled" xml:space="preserve">
     <value>Synchronisierung deaktiviert</value>
   </data>

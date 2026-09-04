@@ -1737,7 +1737,7 @@ namespace MailArchiver.Controllers
             }
 
             // Validate file extension
-            if (!FileUploadHelper.IsAllowedImportExtension(model.MBoxFile.FileName))
+            if (!FileUploadHelper.IsAllowedMboxFileName(model.MBoxFile.FileName))
             {
                 ModelState.AddModelError("MBoxFile", _localizer["InvalidImportFileType"].Value);
                 return View(model);
