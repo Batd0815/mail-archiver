@@ -562,7 +562,7 @@ var app = builder.Build();
 
 // Handle CLI commands: S3 disaster recovery and local import
 var cliArgs = Environment.GetCommandLineArgs();
-if (cliArgs.Any(a => a == "--import-mbox" || a == "--import-eml" || a == "--preview-thunderbird"))
+if (cliArgs.Any(a => a == "--import-mbox" || a == "--import-eml" || a == "--preview-thunderbird" || a == "--import-thunderbird"))
 {
     using var cliScope = app.Services.CreateScope();
     var cliServices = cliScope.ServiceProvider;
@@ -570,6 +570,95 @@ if (cliArgs.Any(a => a == "--import-mbox" || a == "--import-eml" || a == "--prev
     
     try
     {
+        // === Thunderbird profile batch import ===
+        // The explicit --confirm flag is required so a preview can be reviewed first.
+        if (cliArgs.Contains("--import-thunderbird"))
+        {
+            var directoryIndex = Array.IndexOf(cliArgs, "--directory");
+            var accountIdIndex = Array.IndexOf(cliArgs, "--account-id");
+            if (directoryIndex < 0 || directoryIndex + 1 >= cliArgs.Length ||
+                accountIdIndex < 0 || accountIdIndex + 1 >= cliArgs.Length)
+            {
+                Console.WriteLine("ERROR: --directory <path> and --account-id <id> are required for Thunderbird import");
+                Environment.Exit(1);
+            }
+
+            if (!cliArgs.Contains("--confirm"))
+            {
+                Console.WriteLine("ERROR: No import started. Review the preview first and add --confirm to explicitly queue the batch.");
+                Environment.Exit(1);
+            }
+
+            var sourceDirectory = cliArgs[directoryIndex + 1];
+            var accountIdStr = cliArgs[accountIdIndex + 1];
+            if (!int.TryParse(accountIdStr, out var targetAccountId))
+            {
+                Console.WriteLine($"ERROR: Invalid account-id: {accountIdStr}");
+                Environment.Exit(1);
+            }
+
+            if (!Directory.Exists(sourceDirectory))
+            {
+                Console.WriteLine($"ERROR: Directory not found: {sourceDirectory}");
+                Environment.Exit(1);
+            }
+
+            var localImportOptions = cliServices.GetRequiredService<IOptions<LocalImportOptions>>().Value;
+            if (!LocalImportPathPolicy.IsAllowed(sourceDirectory, localImportOptions.AllowedPaths))
+            {
+                Console.WriteLine($"ERROR: Directory '{sourceDirectory}' is not in an allowed import directory.");
+                Environment.Exit(1);
+            }
+
+            var targetBaseIndex = Array.IndexOf(cliArgs, "--target-base-folder");
+            var targetBaseFolder = targetBaseIndex >= 0 && targetBaseIndex + 1 < cliArgs.Length
+                ? cliArgs[targetBaseIndex + 1]
+                : "Thunderbird";
+            var preview = ThunderbirdMBoxScanner.Scan(sourceDirectory, targetBaseFolder);
+            Console.WriteLine($"=== Thunderbird MBox Batch Import ({preview.Items.Count} files) ===");
+            Console.WriteLine($"Target account ID: {targetAccountId}");
+            Console.WriteLine($"Target base folder: {targetBaseFolder}");
+
+            using (var checkScope = cliServices.CreateScope())
+            {
+                var checkContext = checkScope.ServiceProvider.GetRequiredService<MailArchiverDbContext>();
+                var account = await checkContext.MailAccounts.FindAsync(targetAccountId);
+                if (account == null)
+                {
+                    Console.WriteLine($"ERROR: Mail account with ID {targetAccountId} not found in database.");
+                    Environment.Exit(1);
+                }
+                Console.WriteLine($"Target account: {account.EmailAddress}");
+            }
+
+            var mboxService = cliServices.GetRequiredService<IMBoxImportService>();
+            var totalImported = 0;
+            var totalFailed = 0;
+            var totalMalformed = 0;
+            var totalDuplicates = 0;
+            var fileNumber = 0;
+            foreach (var item in preview.Items)
+            {
+                fileNumber++;
+                Console.WriteLine($"[{fileNumber}/{preview.Items.Count}] {item.RelativePath} -> {item.SuggestedTargetFolder}");
+                var result = await mboxService.ProcessFileAsync(item.SourcePath, Path.GetFileName(item.SourcePath),
+                    targetAccountId, item.SuggestedTargetFolder, "CLI");
+                totalImported += result.SuccessCount;
+                totalFailed += result.FailedCount;
+                totalMalformed += result.SkippedMalformedCount;
+                totalDuplicates += result.SkippedAlreadyExistsCount;
+                Console.WriteLine($"  {result.Status}: {result.SuccessCount} imported, {result.SkippedAlreadyExistsCount} duplicates, {result.FailedCount} failed, {result.SkippedMalformedCount} malformed");
+            }
+
+            Console.WriteLine("=== Thunderbird Batch Results ===");
+            Console.WriteLine($"Files processed: {preview.Items.Count}");
+            Console.WriteLine($"Imported successfully: {totalImported}");
+            Console.WriteLine($"Skipped (duplicates): {totalDuplicates}");
+            Console.WriteLine($"Failed: {totalFailed}");
+            Console.WriteLine($"Skipped (malformed): {totalMalformed}");
+            Environment.Exit(totalFailed == 0 && totalMalformed == 0 ? 0 : 1);
+        }
+
         // === Thunderbird profile preview ===
         // This command is intentionally read-only. It never opens a mail account and never
         // queues an import; it merely lists MBox folders within an allowed local directory.
