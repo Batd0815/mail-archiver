@@ -7,8 +7,8 @@ namespace MailArchiver.Tests.Services
     /// The exit code of an <c>--import-mbox</c> run.
     /// <para>
     /// The case that motivated the fix is <see cref="RepeatedImport_OnlyDuplicates_ExitsZero"/>:
-    /// re-importing an mbox that is already archived skips every message, which sets
-    /// <c>CompletedWithErrors</c>, which used to be reported as a failure.
+    /// re-importing an mbox that is already archived skips every message and finishes with
+    /// <c>CompletedWithDuplicates</c>, which is a successful outcome.
     /// </para>
     /// </summary>
     public class MBoxImportExitCodeTests
@@ -22,13 +22,12 @@ namespace MailArchiver.Tests.Services
         [Fact]
         public void RepeatedImport_OnlyDuplicates_ExitsZero()
         {
-            // Every message skipped as already present. The job reports CompletedWithErrors,
-            // but nothing actually went wrong.
-            Assert.Equal(0, MBoxImportExitCode.For(MBoxImportJobStatus.CompletedWithErrors, 0, 0));
+            Assert.Equal(0, MBoxImportExitCode.For(MBoxImportJobStatus.CompletedWithDuplicates, 0, 0));
         }
 
         [Theory]
         [InlineData(MBoxImportJobStatus.Completed)]
+        [InlineData(MBoxImportJobStatus.CompletedWithDuplicates)]
         [InlineData(MBoxImportJobStatus.CompletedWithErrors)]
         public void FailedMessages_ExitNonZero(MBoxImportJobStatus status)
         {
@@ -37,6 +36,7 @@ namespace MailArchiver.Tests.Services
 
         [Theory]
         [InlineData(MBoxImportJobStatus.Completed)]
+        [InlineData(MBoxImportJobStatus.CompletedWithDuplicates)]
         [InlineData(MBoxImportJobStatus.CompletedWithErrors)]
         public void MalformedMessages_ExitNonZero(MBoxImportJobStatus status)
         {

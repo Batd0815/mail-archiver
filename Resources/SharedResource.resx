@@ -904,6 +904,15 @@
   <data name="CompletedWithErrors" xml:space="preserve">
     <value>Completed with Errors</value>
   </data>
+  <data name="CompletedWithDuplicates" xml:space="preserve">
+    <value>Completed with Duplicates</value>
+  </data>
+  <data name="ImportCompletedWithDuplicatesTitle" xml:space="preserve">
+    <value>Import Completed with Duplicates</value>
+  </data>
+  <data name="ImportCompletedWithDuplicatesDescription" xml:space="preserve">
+    <value>The import completed successfully. Emails already present in the archive were skipped as duplicates.</value>
+  </data>
   <data name="ImportCompletedWithErrorsTitle" xml:space="preserve">
     <value>Import Completed with Errors</value>
   </data>

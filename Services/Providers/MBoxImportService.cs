@@ -271,10 +271,15 @@ private readonly IServiceProvider _serviceProvider;
 
                 if (job.Status != MBoxImportJobStatus.Cancelled)
                 {
-                    if (job.FailedCount > 0 || job.SkippedMalformedCount > 0 || job.SkippedAlreadyExistsCount > 0)
+                    if (job.FailedCount > 0 || job.SkippedMalformedCount > 0)
                     {
                         job.Status = MBoxImportJobStatus.CompletedWithErrors;
                         job.ErrorMessage = $"{job.SuccessCount} imported, {job.FailedCount} failed, {job.SkippedMalformedCount} malformed, {job.SkippedAlreadyExistsCount} duplicates";
+                    }
+                    else if (job.SkippedAlreadyExistsCount > 0)
+                    {
+                        job.Status = MBoxImportJobStatus.CompletedWithDuplicates;
+                        job.ResultMessage = $"{job.SuccessCount} imported, {job.SkippedAlreadyExistsCount} duplicates skipped";
                     }
                     else
                     {

@@ -19,6 +19,10 @@ namespace MailArchiver.Models
         public int SkippedMalformedCount { get; set; }
         public int SkippedAlreadyExistsCount { get; set; }
         public int TotalEmails { get; set; }
+        /// <summary>
+        /// Human-readable outcome summary for completed imports that have no processing error.
+        /// </summary>
+        public string? ResultMessage { get; set; }
         public string? ErrorMessage { get; set; }
         public string? CurrentEmailSubject { get; set; }
         public long ProcessedBytes { get; set; }
@@ -33,6 +37,7 @@ namespace MailArchiver.Models
         Queued,
         Running,
         Completed,
+        CompletedWithDuplicates,
         CompletedWithErrors,
         Failed,
         Cancelled

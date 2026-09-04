@@ -907,6 +907,15 @@
   <data name="CompletedWithErrors" xml:space="preserve">
     <value>Mit Fehlern abgeschlossen</value>
   </data>
+  <data name="CompletedWithDuplicates" xml:space="preserve">
+    <value>Erfolgreich mit Duplikaten</value>
+  </data>
+  <data name="ImportCompletedWithDuplicatesTitle" xml:space="preserve">
+    <value>Import erfolgreich mit Duplikaten abgeschlossen</value>
+  </data>
+  <data name="ImportCompletedWithDuplicatesDescription" xml:space="preserve">
+    <value>Der Import wurde erfolgreich abgeschlossen. Bereits archivierte E-Mails wurden als Duplikate übersprungen.</value>
+  </data>
   <data name="ImportCompletedWithErrorsTitle" xml:space="preserve">
     <value>Import mit Fehlern abgeschlossen</value>
   </data>
