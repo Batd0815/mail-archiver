@@ -23,17 +23,20 @@ namespace MailArchiver.Services.Core
         private readonly ILogger<EmailCoreService> _logger;
         private readonly DateTimeHelper _dateTimeHelper;
         private readonly BatchOperationOptions _batchOptions;
+        private readonly MailRuleSyncService _mailRuleSyncService;
 
         public EmailCoreService(
             MailArchiverDbContext context,
             ILogger<EmailCoreService> logger,
             DateTimeHelper dateTimeHelper,
-            IOptions<BatchOperationOptions> batchOptions)
+            IOptions<BatchOperationOptions> batchOptions,
+            MailRuleSyncService mailRuleSyncService)
         {
             _context = context;
             _logger = logger;
             _dateTimeHelper = dateTimeHelper;
             _batchOptions = batchOptions.Value;
+            _mailRuleSyncService = mailRuleSyncService;
         }
 
         #region Search Methods
@@ -1501,6 +1504,8 @@ namespace MailArchiver.Services.Core
 
                 try
                 {
+                    archivedEmail.FolderName = await _mailRuleSyncService.ResolveFolderAsync(
+                        archivedEmail, account.Id, archivedEmail.FolderName);
                     _context.ArchivedEmails.Add(archivedEmail);
                     await _context.SaveChangesAsync();
 
@@ -2026,11 +2031,6 @@ namespace MailArchiver.Services.Core
                     .Select(g => new { FolderName = g.Key, Count = g.Count() })
                     .ToListAsync();
 
-                if (!folderData.Any())
-                {
-                    return new List<FolderTreeNode>();
-                }
-
                 // Security: Validate folder names to prevent potential injection attacks
                 const int maxFolderNameLength = 500;
                 const int maxTotalFolders = 10000;
@@ -2052,13 +2052,58 @@ namespace MailArchiver.Services.Core
                         folderData.Count - validFolderData.Count, accountId);
                 }
 
-                return BuildFolderTree(validFolderData.Select(f => (f.FolderName, f.Count)).ToList());
+                // Persistent folder rows retain empty folders (for example a newly
+                // created year folder) in the archive tree. Apply the same account
+                // scope as the email query before adding their paths.
+                var archiveFoldersQuery = _context.ArchiveFolders.AsNoTracking();
+                if (accountId.HasValue)
+                {
+                    archiveFoldersQuery = archiveFoldersQuery.Where(f => f.MailAccountId == accountId.Value);
+                }
+                else if (allowedAccountIds != null)
+                {
+                    archiveFoldersQuery = archiveFoldersQuery.Where(f => allowedAccountIds.Contains(f.MailAccountId));
+                }
+
+                var archiveFolders = await archiveFoldersQuery
+                    .Select(f => new { f.Id, f.Name, f.ParentId })
+                    .ToListAsync();
+                var archiveFoldersById = archiveFolders.ToDictionary(f => f.Id, f => (f.Id, f.Name, f.ParentId));
+                var folderRows = validFolderData.Select(f => (f.FolderName!, f.Count)).ToList();
+                foreach (var folder in archiveFolders)
+                {
+                    var path = BuildPersistentFolderPath(folder.Id, archiveFoldersById);
+                    if (path.Length <= maxFolderNameLength &&
+                        !path.Contains("..") && !path.Contains('<') && !path.Contains('>') &&
+                        !path.Contains("javascript:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        folderRows.Add((path, 0));
+                    }
+                }
+
+                return BuildFolderTree(folderRows);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting folder tree for account {AccountId}", accountId);
                 return new List<FolderTreeNode>();
             }
+        }
+
+        private static string BuildPersistentFolderPath(
+            int folderId,
+            IReadOnlyDictionary<int, (int Id, string Name, int? ParentId)> folders)
+        {
+            var segments = new List<string>();
+            var visited = new HashSet<int>();
+            var currentId = (int?)folderId;
+            while (currentId.HasValue && visited.Add(currentId.Value) && folders.TryGetValue(currentId.Value, out var current))
+            {
+                segments.Add(current.Name);
+                currentId = current.ParentId;
+            }
+            segments.Reverse();
+            return string.Join('/', segments);
         }
 
         // Builds the folder tree from (folderName, count) pairs. Extracted from GetFolderTreeAsync so

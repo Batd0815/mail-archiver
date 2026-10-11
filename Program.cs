@@ -418,6 +418,7 @@ builder.Services.AddDbContext<MailArchiverDbContext>((serviceProvider, options) 
 builder.Services.AddSingleton<MailArchiver.Services.Providers.Graph.GraphAuthClientFactory>();
 builder.Services.AddScoped<MailArchiver.Services.Providers.Graph.IGraphFolderService, MailArchiver.Services.Providers.Graph.GraphFolderService>();
 builder.Services.AddScoped<MailArchiver.Services.Providers.Graph.GraphMailArchiver>();
+builder.Services.AddScoped<MailArchiver.Services.MailRuleSyncService>();
 builder.Services.AddScoped<MailArchiver.Services.Providers.Graph.GraphMailRestorer>();
 builder.Services.AddScoped<MailArchiver.Services.Providers.Graph.GraphMailSyncService>();
 

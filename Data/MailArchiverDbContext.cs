@@ -17,6 +17,8 @@ namespace MailArchiver.Data
         public DbSet<AccountStorageCache> AccountStorageCaches { get; set; }
         public DbSet<AccountStorageBackfillState> AccountStorageBackfillStates { get; set; }
         public DbSet<ApiKey> ApiKeys { get; set; }
+        public DbSet<ArchiveFolder> ArchiveFolders { get; set; }
+        public DbSet<MailRule> MailRules { get; set; }
 
         public MailArchiverDbContext(DbContextOptions<MailArchiverDbContext> options)
             : base(options)
@@ -111,6 +113,51 @@ namespace MailArchiver.Data
 
             modelBuilder.Entity<ArchivedEmail>()
                 .HasIndex(e => e.MailAccountId);
+
+            modelBuilder.Entity<ArchiveFolder>()
+                .Property(f => f.Name)
+                .HasColumnType("text")
+                .IsRequired();
+
+            modelBuilder.Entity<ArchiveFolder>()
+                .HasIndex(f => new { f.MailAccountId, f.ParentId, f.Name })
+                .IsUnique()
+                .HasDatabaseName("IX_ArchiveFolders_Account_Parent_Name");
+
+            modelBuilder.Entity<ArchiveFolder>()
+                .HasOne(f => f.MailAccount)
+                .WithMany(a => a.ArchiveFolders)
+                .HasForeignKey(f => f.MailAccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ArchiveFolder>()
+                .HasOne(f => f.Parent)
+                .WithMany(f => f.Children)
+                .HasForeignKey(f => f.ParentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<MailRule>()
+                .Property(r => r.Name).HasColumnType("text").IsRequired();
+            modelBuilder.Entity<MailRule>()
+                .Property(r => r.FromContains).HasColumnType("text");
+            modelBuilder.Entity<MailRule>()
+                .Property(r => r.ToContains).HasColumnType("text");
+            modelBuilder.Entity<MailRule>()
+                .Property(r => r.SubjectContains).HasColumnType("text");
+            modelBuilder.Entity<MailRule>()
+                .Property(r => r.SourceFolderContains).HasColumnType("text");
+            modelBuilder.Entity<MailRule>()
+                .Property(r => r.TargetFolder).HasColumnType("text");
+            modelBuilder.Entity<MailRule>()
+                .Property(r => r.Tag).HasColumnType("text");
+            modelBuilder.Entity<MailRule>()
+                .HasIndex(r => new { r.MailAccountId, r.Priority })
+                .HasDatabaseName("IX_MailRules_Account_Priority");
+            modelBuilder.Entity<MailRule>()
+                .HasOne<MailAccount>()
+                .WithMany()
+                .HasForeignKey(r => r.MailAccountId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Beziehungen
             modelBuilder.Entity<ArchivedEmail>()

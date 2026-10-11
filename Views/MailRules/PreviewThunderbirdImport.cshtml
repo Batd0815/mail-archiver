@@ -1,0 +1,85 @@
+@model MailArchiver.ViewModels.ThunderbirdRuleImportViewModel
+@{
+    ViewData["Title"] = "Thunderbird-Import prüfen";
+}
+
+<div class="container-fluid">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h1 class="h3 mb-1"><i class="bi bi-list-check me-2"></i>Importvorschau</h1>
+            <div class="text-muted">@Model.AccountName</div>
+        </div>
+        <a class="btn btn-outline-secondary" asp-controller="ThunderbirdRuleImport" asp-action="Import" asp-route-accountId="@Model.AccountId">Andere Datei wählen</a>
+    </div>
+
+    <div class="alert alert-info">
+        Erkannt: <strong>@Model.SupportedRules.Count</strong> importierbare Regel(n),
+        <strong>@Model.UnsupportedRules.Count</strong> nicht unterstützte Regel(n),
+        <strong>@Model.DuplicateCount</strong> bereits vorhandene Regeldefinition(en).
+        Importierte Regeln bleiben pausiert. Fehlende Zielordner werden beim Bestätigen automatisch angelegt.
+    </div>
+
+    @if (Model.UnsupportedRules.Count > 0)
+    {
+        <div class="card mb-3">
+            <div class="card-header">Nicht unterstützte Regeln — werden ausgelassen</div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>#</th><th>Regel</th><th>Grund</th></tr></thead>
+                    <tbody>
+                    @foreach (var item in Model.UnsupportedRules)
+                    {
+                        <tr><td>@item.SourceIndex</td><td>@item.Name</td><td>@item.Reason</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (Model.SupportedRules.Count > 0)
+    {
+        <div class="card mb-3">
+            <div class="card-header">Importierbare Regeln — Reihenfolge aus Thunderbird</div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead><tr><th>#</th><th>Regel</th><th>Bedingung</th><th>Zielordner</th><th>Thunderbird</th><th>Hinweis</th></tr></thead>
+                    <tbody>
+                    @foreach (var rule in Model.SupportedRules)
+                    {
+                        <tr>
+                            <td>@rule.SourceIndex</td>
+                            <td>@rule.Name</td>
+                            <td>
+                                @if (rule.FromContains != null) { <span>Absender enthält: @rule.FromContains</span> }
+                                @if (rule.SubjectContains != null) { <span>Betreff enthält: @rule.SubjectContains</span> }
+                                <div class="small text-muted">Ausgangsordner: INBOX</div>
+                            </td>
+                            <td>@rule.TargetFolder</td>
+                            <td>@(rule.SourceEnabled ? "Aktiv" : "Pausiert")</td>
+                            <td>@(rule.Warning ?? "—")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @if (Model.DuplicateCount > 0)
+        {
+            <div class="alert alert-warning">Exakt bereits vorhandene Regeldefinitionen werden beim Import übersprungen.</div>
+        }
+        <form asp-controller="ThunderbirdRuleImport" asp-action="Confirm" method="post" onsubmit="return confirm('Regeln und fehlende Zielordner anlegen? Die Regeln bleiben pausiert; vorhandene Mails werden nicht verändert.');">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="accountId" value="@Model.AccountId" />
+            <input type="hidden" name="confirmationToken" value="@Model.ConfirmationToken" />
+            <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg me-1"></i>Import bestätigen (Regeln pausiert)</button>
+            <a class="btn btn-outline-secondary" asp-controller="MailRules" asp-action="Index" asp-route-accountId="@Model.AccountId">Abbrechen</a>
+        </form>
+    }
+    else
+    {
+        <div class="alert alert-warning">Es gibt keine unterstützten Regeln zum Importieren.</div>
+        <a class="btn btn-outline-secondary" asp-controller="ThunderbirdRuleImport" asp-action="Import" asp-route-accountId="@Model.AccountId">Zurück</a>
+    }
+</div>

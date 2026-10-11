@@ -19,15 +19,18 @@ namespace MailArchiver.Services.Providers.Graph
         private readonly MailArchiverDbContext _context;
         private readonly ILogger<GraphMailArchiver> _logger;
         private readonly DateTimeHelper _dateTimeHelper;
+        private readonly MailRuleSyncService _mailRuleSyncService;
 
         public GraphMailArchiver(
             MailArchiverDbContext context,
             ILogger<GraphMailArchiver> logger,
-            DateTimeHelper dateTimeHelper)
+            DateTimeHelper dateTimeHelper,
+            MailRuleSyncService mailRuleSyncService)
         {
             _context = context;
             _logger = logger;
             _dateTimeHelper = dateTimeHelper;
+            _mailRuleSyncService = mailRuleSyncService;
         }
 
         /// <summary>
@@ -67,6 +70,8 @@ namespace MailArchiver.Services.Providers.Graph
                 _logger.LogDebug("Archiving new email {MessageId} for account {AccountName}", messageId, account.Name);
 
                 var archivedEmail = await BuildArchivedEmailAsync(graphClient, account, message, messageId, isOutgoing, folderName);
+                archivedEmail.FolderName = await _mailRuleSyncService.ResolveFolderAsync(
+                    archivedEmail, account.Id, folderName);
 
                 _context.ArchivedEmails.Add(archivedEmail);
                 await _context.SaveChangesAsync();

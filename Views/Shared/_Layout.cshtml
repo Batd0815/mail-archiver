@@ -58,6 +58,18 @@
                                 <i class="bi bi-archive me-1"></i>@Localizer["Archive"]
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Controller"].ToString() == "ArchiveFolders" ? "active" : "")"
+                               asp-controller="ArchiveFolders" asp-action="Index">
+                                <i class="bi bi-folder2-open me-1"></i>Ordner
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["Controller"].ToString() == "MailRules" ? "active" : "")"
+                               asp-controller="MailRules" asp-action="Index">
+                                <i class="bi bi-funnel me-1"></i>Regeln
+                            </a>
+                        </li>
                         @if (AuthService.IsCurrentUserAdmin(Context) || AuthService.IsCurrentUserSelfManager(Context))
                         {
                             <li class="nav-item">

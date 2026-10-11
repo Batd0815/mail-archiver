@@ -1,0 +1,118 @@
+@model MailArchiver.ViewModels.ArchiveFolderViewModel
+@{
+    ViewData["Title"] = "Archivordner verwalten";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3"><i class="bi bi-folder2-open me-2"></i>Archivordner verwalten</h1>
+    </div>
+
+    <form method="get" class="card card-body mb-3">
+        <label class="form-label" for="accountId">Konto</label>
+        <select class="form-select" id="accountId" name="accountId" onchange="this.form.submit()">
+            @foreach (var option in Model.AccountOptions)
+            {
+                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+            }
+        </select>
+    </form>
+
+    @if (Model.SelectedAccountId.HasValue)
+    {
+        <div class="card mb-3">
+            <div class="card-header">Neuen Ordner anlegen</div>
+            <div class="card-body">
+                <form asp-action="Create" method="post" class="row g-2 align-items-end">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="accountId" value="@Model.SelectedAccountId" />
+                    <div class="col-sm-5"><label class="form-label">Ordnername</label><input name="name" class="form-control" placeholder="2027" required /></div>
+                    <div class="col-sm-5"><label class="form-label" for="createParentId">Übergeordneter Ordner</label>
+                        <select name="parentId" id="createParentId" class="form-select">
+                            <option value="">Hauptordner</option>
+                            @foreach (var option in Model.FolderOptions) { <option value="@option.Value" data-path="@option.Text.Trim()">@option.Text</option> }
+                        </select>
+                    </div>
+                    <div class="col-sm-2"><button class="btn btn-primary w-100" type="submit">Anlegen</button></div>
+                </form>
+                <div class="form-text mt-2" id="createPathPreview">Vorschau: neuer Hauptordner</div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">Ordnerstruktur</div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                    <thead><tr><th>Pfad</th><th>Mails</th><th>Aktionen</th></tr></thead>
+                    <tbody>
+                    @foreach (var folder in Model.Folders)
+                    {
+                        <tr>
+                            <td><span style="padding-left:@(folder.Depth * 1.25)rem"><i class="bi bi-folder me-2 text-warning"></i>@folder.Path</span></td>
+                            <td title="einschließlich Unterordner">@folder.MessageCount (@folder.SubtreeMessageCount mit Unterordnern)</td>
+                            <td class="d-flex gap-2">
+                                <form asp-action="Rename" method="post" class="d-flex gap-1 folder-change-form"
+                                      data-preview="Ordner umbenennen" data-path="@folder.Path" data-mail-count="@folder.SubtreeMessageCount" data-operation="rename">
+                                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@folder.Id" /><input type="hidden" name="accountId" value="@Model.SelectedAccountId" />
+                                    <input name="name" class="form-control form-control-sm" placeholder="neuer Name" required />
+                                    <button class="btn btn-outline-secondary btn-sm" type="submit">Umbenennen</button>
+                                </form>
+                                <form asp-action="Move" method="post" class="d-flex gap-1 folder-change-form"
+                                      data-preview="Ordner verschieben" data-path="@folder.Path" data-mail-count="@folder.SubtreeMessageCount" data-operation="move">
+                                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@folder.Id" /><input type="hidden" name="accountId" value="@Model.SelectedAccountId" />
+                                    <select name="parentId" class="form-select form-select-sm folder-target" aria-label="Neuer übergeordneter Ordner">
+                                        <option value="">Hauptordner</option>
+                                        @foreach (var option in Model.FolderOptions.Where(o => o.Value != folder.Id.ToString() && !o.Text.Trim().StartsWith(folder.Path + "/", StringComparison.OrdinalIgnoreCase))) { <option value="@option.Value" data-path="@option.Text.Trim()">@option.Text</option> }
+                                    </select>
+                                    <button class="btn btn-outline-primary btn-sm" type="submit">Verschieben</button>
+                                </form>
+                                <form asp-action="Delete" method="post" class="folder-change-form" data-preview="Leeren Ordner löschen" data-path="@folder.Path" data-mail-count="0" data-operation="delete">
+                                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@folder.Id" /><input type="hidden" name="accountId" value="@Model.SelectedAccountId" />
+                                    <button class="btn btn-outline-danger btn-sm" type="submit">Löschen</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+(() => {
+    const parent = document.getElementById('createParentId');
+    const name = document.querySelector('input[name="name"]');
+    const preview = document.getElementById('createPathPreview');
+    const updateCreatePreview = () => {
+        const parentPath = parent?.selectedOptions[0]?.dataset.path;
+        const childName = name?.value.trim() || '…';
+        preview.textContent = parent?.value ? `Vorschau: ${parentPath}/${childName}` : `Vorschau: ${childName} (Hauptordner)`;
+    };
+    parent?.addEventListener('change', updateCreatePreview);
+    name?.addEventListener('input', updateCreatePreview);
+
+    document.querySelectorAll('.folder-change-form').forEach(form => {
+        form.addEventListener('submit', event => {
+            const operation = form.dataset.operation;
+            const path = form.dataset.path;
+            const count = Number(form.dataset.mailCount || 0);
+            let description = `${form.dataset.preview}: ${path}.`;
+            if (operation === 'rename') {
+                const newName = form.querySelector('input[name="name"]').value.trim();
+                const prefix = path.includes('/') ? path.substring(0, path.lastIndexOf('/') + 1) : '';
+                description += ` Neuer Pfad: ${prefix}${newName}.`;
+            } else if (operation === 'move') {
+                const target = form.querySelector('.folder-target');
+                const targetPath = target.value ? target.selectedOptions[0].dataset.path : '(Hauptordner)';
+                description += ` Neuer übergeordneter Ordner: ${targetPath}.`;
+            }
+            if (operation !== 'delete') description += ` Betroffene Mails einschließlich Unterordner: ${count}.`;
+            else description += ' Es werden keine Mails gelöscht.';
+            if (!window.confirm(description + ' Fortfahren?')) event.preventDefault();
+        });
+    });
+})();
+</script>
+}

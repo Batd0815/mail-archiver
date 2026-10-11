@@ -1,0 +1,84 @@
+@model MailArchiver.ViewModels.MailRuleEditViewModel
+@{
+    ViewData["Title"] = Model.Id.HasValue ? "Regel bearbeiten" : "Regel erstellen";
+}
+
+<div class="container-fluid">
+    <h1 class="h3 mb-3"><i class="bi bi-funnel me-2"></i>@ViewData["Title"]</h1>
+    <div class="alert alert-info">Aktive Regeln verschieben nur neu synchronisierte Mails dieses Kontos automatisch. Bereits archivierte Mails werden weiterhin erst nach Vorschau und Bestätigung verschoben. Anbieter-Originale bleiben unverändert.</div>
+
+    <form asp-action="Save" method="post" class="card card-body">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="MailAccountId" type="hidden" />
+        <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+        <div class="form-check mb-3">
+            <input asp-for="IsEnabled" class="form-check-input" />
+            <label asp-for="IsEnabled" class="form-check-label">Automatisch bei neuen synchronisierten Mails anwenden</label>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <label asp-for="Name" class="form-label">Name der Regel</label>
+                <input asp-for="Name" class="form-control" placeholder="Newsletter 2024" required />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="col-lg-6">
+                <label asp-for="TargetFolder" class="form-label">Zielordner</label>
+                <select asp-for="TargetFolder" asp-items="Model.FolderOptions" class="form-select" required>
+                    <option value="">Bitte Zielordner auswählen</option>
+                </select>
+                <div class="form-text">Lege fehlende Ordner zuerst unter „Ordner“ an.</div>
+                <span asp-validation-for="TargetFolder" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="FromContains" class="form-label">Absender enthält</label>
+                <input asp-for="FromContains" class="form-control" placeholder="newsletter@example.com oder example.com" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="ToContains" class="form-label">Empfänger enthält</label>
+                <input asp-for="ToContains" class="form-control" placeholder="deine Adresse oder ein Empfänger" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="SubjectContains" class="form-label">Betreff enthält</label>
+                <input asp-for="SubjectContains" class="form-control" placeholder="Newsletter" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="SourceFolderContains" class="form-label">Ausgangsordner enthält (optional)</label>
+                <input asp-for="SourceFolderContains" class="form-control" placeholder="z. B. Newsletter" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="HasAttachments" class="form-label">Anhänge</label>
+                <select asp-for="HasAttachments" class="form-select">
+                    <option value="">Beliebig</option>
+                    <option value="true">Nur mit Anhang</option>
+                    <option value="false">Nur ohne Anhang</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="DateField" class="form-label">Welches Datum?</label>
+                <select asp-for="DateField" class="form-select">
+                    <option value="0">Gesendet am</option>
+                    <option value="1">Empfangen am</option>
+                </select>
+                <div class="form-text">Der Zeitraum schließt beide gewählten Tage vollständig ein.</div>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="SentFrom" class="form-label">Von</label>
+                <input asp-for="SentFrom" type="date" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <label asp-for="SentTo" class="form-label">Bis</label>
+                <input asp-for="SentTo" type="date" class="form-control" />
+                <span asp-validation-for="SentTo" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">Regel speichern</button>
+            <a asp-action="Index" asp-route-accountId="@Model.MailAccountId" class="btn btn-outline-secondary">Abbrechen</a>
+        </div>
+    </form>
+</div>

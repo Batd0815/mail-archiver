@@ -57,6 +57,7 @@ public class MailAccount
     }
     
     public virtual ICollection<ArchivedEmail> ArchivedEmails { get; set; } = new List<ArchivedEmail>();
+    public virtual ICollection<ArchiveFolder> ArchiveFolders { get; set; } = new List<ArchiveFolder>();
     
     // Navigation properties for multi-user functionality
     public virtual ICollection<UserMailAccount> UserMailAccounts { get; set; } = new List<UserMailAccount>();

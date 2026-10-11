@@ -27,6 +27,41 @@ requires an explicit approval after a successful development test.
 5. **Tags and rules** — model tags as many-to-many data; introduce rules as a dry run
    before any bulk operation.
 
+## Rules status
+
+The first rule foundation is now implemented in `Models/MailRule.cs` and
+`Services/MailRuleEvaluator.cs`. It supports account scoping, source-folder,
+sender/recipient/subject matching, attachment presence, sent-date ranges,
+priority ordering and stop-processing behavior. Target folders are represented
+as canonical paths such as `Privat/Versicherung/2026`, so nested archive
+structures remain selectable and predictable. The evaluator is side-effect free
+and is covered by unit tests. Persisted rule definitions, the rule-management
+page, preview, and execution actions remain follow-up steps.
+
+## Archive folder management requirement
+
+The archive tree must be persistent rather than derived only from mail rows.
+This is required for empty folders such as a future year (`2027`). The folder
+management UI will therefore support:
+
+- create empty folders and nested subfolders;
+- rename and move a folder together with its complete subtree;
+- delete empty folders;
+- remove non-empty folders only after their messages and subfolders have been
+  moved elsewhere; folder removal never deletes archived mail.
+
+Mail rows will keep their current path for efficient search, while a separate
+folder entity preserves empty folders and provides a stable place for rules to
+target. All destructive-looking operations require a preview and confirmation.
+
+The DEV folder editor is available at `/ArchiveFolders`: it backfills persistent
+folder rows from existing archived paths, creates empty folders and subfolders,
+renames folders, moves a complete subtree, and refuses to delete folders that
+still contain mail or subfolders. The archive tree also includes empty persistent
+folders. The editor shows the affected mail count and asks for confirmation before
+rename or move. A dedicated server-rendered preview page and move-before-delete
+workflow remain before production use.
+
 ## Phase 1a status
 
 Implemented in commit `98210d3`:

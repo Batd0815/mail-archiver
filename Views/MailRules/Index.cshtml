@@ -1,0 +1,95 @@
+@model MailArchiver.ViewModels.MailRuleIndexViewModel
+@{
+    ViewData["Title"] = "Mailregeln";
+}
+
+<div class="container-fluid">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h1 class="h3 mb-1"><i class="bi bi-funnel me-2"></i>Mailregeln</h1>
+            <div class="text-muted">Aktive Regeln sortieren neue Mails bei der Synchronisierung. Vorhandene Archivkopien verschiebst du weiterhin nach Vorschau und Bestätigung. Anbieter-Originale werden nicht verändert.</div>
+        </div>
+        @if (Model.SelectedAccountId.HasValue)
+        {
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-outline-primary" asp-controller="ThunderbirdRuleImport" asp-action="Import" asp-route-accountId="@Model.SelectedAccountId"><i class="bi bi-upload me-1"></i>Thunderbird-Regeln importieren</a>
+                <a class="btn btn-primary" asp-action="Create" asp-route-accountId="@Model.SelectedAccountId"><i class="bi bi-plus-lg me-1"></i>Regel erstellen</a>
+            </div>
+        }
+    </div>
+
+    <form method="get" class="card card-body mb-3">
+        <label class="form-label" for="accountId">Konto</label>
+        <select class="form-select" id="accountId" name="accountId" onchange="this.form.submit()">
+            @foreach (var option in Model.AccountOptions)
+            {
+                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+            }
+        </select>
+    </form>
+
+    @if (Model.SelectedAccountId.HasValue)
+    {
+        @if (Model.Rules.Count == 0)
+        {
+            <div class="alert alert-info">Für dieses Konto gibt es noch keine Regeln. Lege zuerst die passenden Archivordner an und erstelle dann eine Regel.</div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead><tr><th>Regel</th><th>Bedingungen</th><th>Zielordner</th><th>Status</th><th>Aktionen</th></tr></thead>
+                        <tbody>
+                        @foreach (var rule in Model.Rules)
+                        {
+                            <tr>
+                                <td>@rule.Name</td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(rule.FromContains)) { <div>Absender enthält: @rule.FromContains</div> }
+                                    @if (!string.IsNullOrWhiteSpace(rule.ToContains)) { <div>Empfänger enthält: @rule.ToContains</div> }
+                                    @if (!string.IsNullOrWhiteSpace(rule.SubjectContains)) { <div>Betreff enthält: @rule.SubjectContains</div> }
+                                    @if (!string.IsNullOrWhiteSpace(rule.SourceFolderContains)) { <div>Ausgangsordner enthält: @rule.SourceFolderContains</div> }
+                                    @if (rule.HasAttachments.HasValue) { <div>@(rule.HasAttachments.Value ? "Mit Anhang" : "Ohne Anhang")</div> }
+                                    @if (rule.SentFrom.HasValue || rule.SentTo.HasValue)
+                                    {
+                                        <div>@(rule.DateField == MailRuleDateField.ReceivedDate ? "Empfangen" : "Gesendet"):
+                                            @(rule.SentFrom?.ToString("dd.MM.yyyy") ?? "…") – @(rule.SentTo?.ToString("dd.MM.yyyy") ?? "…")</div>
+                                    }
+                                </td>
+                                <td>@rule.TargetFolder</td>
+                                <td>
+                                    @if (rule.IsEnabled)
+                                    {
+                                        <span class="badge bg-success">Automatisch aktiv</span>
+                                        <div class="small text-muted">nur neue synchronisierte Mails</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Pausiert</span>
+                                    }
+                                    <div class="small text-muted">Bestand nur nach Vorschau</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <a class="btn btn-sm btn-primary" asp-action="Preview" asp-route-id="@rule.Id">Vorschau</a>
+                                        <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@rule.Id">Bearbeiten</a>
+                                        <form asp-action="Delete" method="post" onsubmit="return confirm('Regel löschen? Bereits verschobene Mails bleiben unverändert.');">
+                                            @Html.AntiForgeryToken()<input type="hidden" name="id" value="@rule.Id" />
+                                            <button class="btn btn-sm btn-outline-danger" type="submit">Löschen</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="alert alert-warning">Für dein Benutzerkonto ist kein Mailkonto freigegeben.</div>
+    }
+</div>

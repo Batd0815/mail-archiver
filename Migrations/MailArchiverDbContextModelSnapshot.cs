@@ -106,6 +106,101 @@ namespace MailArchiver.Migrations
                     b.ToTable("MailAccounts", "mail_archiver");
                 });
 
+            modelBuilder.Entity("MailArchiver.Models.ArchiveFolder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("MailAccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MailAccountId", "ParentId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ArchiveFolders_Account_Parent_Name");
+
+                    b.ToTable("ArchiveFolders", "mail_archiver");
+                });
+
+            modelBuilder.Entity("MailArchiver.Models.MailRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer");
+
+                    b.Property<MailArchiver.Models.MailRuleDateField>("DateField")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FromContains")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("HasAttachments")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("MailAccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("SentFrom")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("SentTo")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("SourceFolderContains")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SubjectContains")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tag")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TargetFolder")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ToContains")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("StopProcessing")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MailAccountId", "Priority")
+                        .HasDatabaseName("IX_MailRules_Account_Priority");
+
+                    b.ToTable("MailRules", "mail_archiver");
+                });
+
             modelBuilder.Entity("MailArchiver.Models.ArchivedEmail", b =>
                 {
                     b.Property<int>("Id")
@@ -544,6 +639,8 @@ namespace MailArchiver.Migrations
                 {
                     b.Navigation("ArchivedEmails");
 
+                    b.Navigation("ArchiveFolders");
+
                     b.Navigation("UserMailAccounts");
                 });
 
@@ -564,6 +661,31 @@ namespace MailArchiver.Migrations
                     b.Navigation("UserMailAccounts");
                 });
 
+
+            modelBuilder.Entity("MailArchiver.Models.ArchiveFolder", b =>
+                {
+                    b.HasOne("MailAccount", "MailAccount")
+                        .WithMany("ArchiveFolders")
+                        .HasForeignKey("MailAccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MailArchiver.Models.ArchiveFolder", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("MailAccount");
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("MailArchiver.Models.MailRule", b =>
+                {
+                    b.HasOne("MailAccount", null)
+                        .WithMany()
+                        .HasForeignKey("MailAccountId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
 
             modelBuilder.Entity("MailArchiver.Models.BandwidthUsage", b =>
                 {

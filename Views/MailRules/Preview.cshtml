@@ -1,0 +1,101 @@
+@model MailArchiver.ViewModels.MailRulePreviewViewModel
+@{
+    ViewData["Title"] = "Regelvorschau";
+    var dateLabel = Model.Rule.DateField == MailRuleDateField.ReceivedDate ? "Empfangsdatum" : "Versanddatum";
+}
+
+<div class="container-fluid">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h1 class="h3 mb-1">Vorschau: @Model.Rule.Name</h1>
+            <div class="text-muted">@Model.AccountName</div>
+        </div>
+        <a asp-action="Index" asp-route-accountId="@Model.Rule.MailAccountId" class="btn btn-outline-secondary">Zurück zu Regeln</a>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">Regel und Ziel</div>
+        <div class="card-body">
+            <div><strong>Zielordner:</strong> @Model.Rule.TargetFolder</div>
+            @if (!string.IsNullOrWhiteSpace(Model.Rule.FromContains)) { <div><strong>Absender enthält:</strong> @Model.Rule.FromContains</div> }
+            @if (!string.IsNullOrWhiteSpace(Model.Rule.ToContains)) { <div><strong>Empfänger enthält:</strong> @Model.Rule.ToContains</div> }
+            @if (!string.IsNullOrWhiteSpace(Model.Rule.SubjectContains)) { <div><strong>Betreff enthält:</strong> @Model.Rule.SubjectContains</div> }
+            @if (!string.IsNullOrWhiteSpace(Model.Rule.SourceFolderContains)) { <div><strong>Ausgangsordner enthält:</strong> @Model.Rule.SourceFolderContains</div> }
+            @if (Model.Rule.HasAttachments.HasValue) { <div><strong>Anhänge:</strong> @(Model.Rule.HasAttachments.Value ? "mit Anhang" : "ohne Anhang")</div> }
+            @if (Model.Rule.SentFrom.HasValue || Model.Rule.SentTo.HasValue)
+            {
+                <div><strong>@dateLabel:</strong> @(Model.Rule.SentFrom?.ToString("dd.MM.yyyy") ?? "ohne Untergrenze") bis einschließlich @(Model.Rule.SentTo?.ToString("dd.MM.yyyy") ?? "ohne Obergrenze")</div>
+            }
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3"><div class="card card-body h-100"><div class="text-muted">Treffer insgesamt</div><strong class="fs-4">@Model.MatchCount.ToString("N0")</strong></div></div>
+        <div class="col-md-3"><div class="card card-body h-100"><div class="text-muted">Werden verschoben</div><strong class="fs-4 text-primary">@Model.MovableCount.ToString("N0")</strong></div></div>
+        <div class="col-md-3"><div class="card card-body h-100"><div class="text-muted">Bereits im Zielordner</div><strong class="fs-4">@Model.AlreadyInTargetCount.ToString("N0")</strong></div></div>
+        <div class="col-md-3"><div class="card card-body h-100"><div class="text-muted">Geschützt, daher ausgelassen</div><strong class="fs-4">@Model.LockedCount.ToString("N0")</strong></div></div>
+    </div>
+
+    @if (Model.MovableCount > 0)
+    {
+        <form asp-action="Apply" method="post" class="mb-3" onsubmit="return confirm('Wirklich @Model.MovableCount.ToString("N0") Mails in „@Model.Rule.TargetFolder“ verschieben? Es werden nur Archivkopien geändert. Anbieter-Originale bleiben unverändert.');">
+            @Html.AntiForgeryToken()<input type="hidden" name="id" value="@Model.Rule.Id" />
+            <button type="submit" class="btn btn-primary">@Model.MovableCount.ToString("N0") Mails jetzt verschieben</button>
+        </form>
+    }
+    else
+    {
+        <div class="alert alert-info">Es gibt derzeit keine verschiebbaren Treffer.</div>
+    }
+
+    <div class="card">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span>Verschiebbare Treffer</span>
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <span class="small text-muted">Zeige @Model.FirstResult–@Model.LastResult von @Model.MovableCount.ToString("N0")</span>
+                <form asp-action="Preview" method="get" class="d-flex align-items-center gap-2">
+                    <input type="hidden" name="id" value="@Model.Rule.Id" />
+                    <input type="hidden" name="page" value="1" />
+                    <label for="pageSize" class="small mb-0">Pro Seite</label>
+                    <select id="pageSize" name="pageSize" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Treffer pro Seite">
+                        <option value="20" selected="@(Model.PageSize == 20)">20</option>
+                        <option value="50" selected="@(Model.PageSize == 50)">50</option>
+                        <option value="100" selected="@(Model.PageSize == 100)">100</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+        @if (Model.Samples.Count == 0)
+        {
+            <div class="card-body text-muted">Keine Beispielmails vorhanden.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead><tr><th>@(Model.Rule.DateField == MailRuleDateField.ReceivedDate ? "Empfangen" : "Gesendet")</th><th>Absender</th><th>Betreff</th><th>Aktueller Ordner</th></tr></thead>
+                    <tbody>
+                    @foreach (var email in Model.Samples)
+                    {
+                        <tr><td>@((Model.Rule.DateField == MailRuleDateField.ReceivedDate ? email.ReceivedDate : email.SentDate).ToString("dd.MM.yyyy"))</td><td>@email.From</td><td>@email.Subject</td><td>@email.FolderName</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="p-3" aria-label="Trefferseiten">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                        <a class="page-link" asp-action="Preview" asp-route-id="@Model.Rule.Id" asp-route-page="@(Model.Page - 1)" asp-route-pageSize="@Model.PageSize">Zurück</a>
+                    </li>
+                    <li class="page-item disabled"><span class="page-link">Seite @Model.Page von @Model.TotalPages</span></li>
+                    <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                        <a class="page-link" asp-action="Preview" asp-route-id="@Model.Rule.Id" asp-route-page="@(Model.Page + 1)" asp-route-pageSize="@Model.PageSize">Weiter</a>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+</div>
